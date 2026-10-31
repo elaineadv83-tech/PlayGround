@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#04060a" />
+<title>BLACKSITE // NIGHTFALL</title>
+<meta name="description" content="BLACKSITE — a browser-based tactical FPS built with Three.js." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23070b12'/%3E%3Cpath d='M6 24 16 6l10 18H6z' fill='none' stroke='%23ff7a1a' stroke-width='2'/%3E%3Ccircle cx='16' cy='20' r='2' fill='%23ff7a1a'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="./css/style.css" />
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="scene"></canvas>
+  <div id="vignette"></div>
+  <div id="grain"></div>
+  <div id="scanlines"></div>
+  <div id="damage-flash"></div>
+
+  <!-- ============ HUD ============ -->
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div class="hud-mission">
+        <div class="mission-tag"><i></i> OP // NIGHTFALL</div>
+        <div class="mission-loc">BLACKSITE <b>07</b></div>
+      </div>
+
+      <div class="hud-wave">
+        <div class="wave-label">WAVE</div>
+        <div class="wave-num" id="wave-num">01</div>
+        <div class="wave-status"><span>HOSTILES</span><b id="enemy-count">0</b></div>
+      </div>
+
+      <div class="hud-stats">
+        <div class="stat"><span>SCORE</span><b id="score">0</b></div>
+        <div class="stat"><span>KILLS</span><b id="kills">0</b></div>
+        <div class="stat"><span>ACC</span><b id="accuracy">0%</b></div>
+      </div>
+    </div>
+
+    <div id="killfeed"></div>
+
+    <div id="combo" class="hidden"><b id="combo-x">x2</b><span>MULTI KILL</span></div>
+
+    <div id="crosshair">
+      <div class="ch-line ch-t"></div>
+      <div class="ch-line ch-b"></div>
+      <div class="ch-line ch-l"></div>
+      <div class="ch-line ch-r"></div>
+      <div class="ch-dot"></div>
+    </div>
+    <div id="hitmarker">
+      <i></i><i></i><i></i><i></i>
+    </div>
+
+    <div id="damage-dirs"></div>
+
+    <div class="hud-bottom">
+      <div class="health-block">
+        <div class="health-head"><span>VITALS</span><b id="health-num">100</b></div>
+        <div class="health-bar">
+          <div id="health-fill"></div>
+          <div class="health-ticks"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="status-line"><span id="status-text">OPERATIONAL</span><span id="regen-text"></span></div>
+      </div>
+
+      <div class="wave-center">
+        <div id="wave-banner" class="hidden">
+          <span id="banner-kicker">INCOMING</span>
+          <h2 id="banner-title">WAVE 01</h2>
+          <p id="banner-sub">HOSTILE SIGNATURES DETECTED</p>
+        </div>
+        <div id="wave-timer" class="hidden"><span>NEXT WAVE IN</span><b id="wave-timer-num">5</b></div>
+      </div>
+
+      <div class="weapon-block">
+        <div class="weapon-name">MK-7 <span>VANGUARD</span></div>
+        <div class="ammo-line"><b id="ammo">30</b><span class="slash">/</span><i id="reserve">210</i></div>
+        <div class="ammo-pips" id="ammo-pips"></div>
+        <div class="equip-line">
+          <span class="nade"><i></i><b id="nade-count">3</b></span>
+          <span id="fire-mode">AUTO</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="reload-hint" class="hidden">
+      <div class="reload-bar"><i id="reload-fill"></i></div>
+      <span>RELOADING</span>
+    </div>
+    <div id="low-health"></div>
+  </div>
+
+  <!-- ============ MENU ============ -->
+  <div id="menu" class="screen">
+    <div class="menu-bg"></div>
+    <div class="menu-grid"></div>
+    <div class="menu-inner">
+      <div class="menu-eyebrow"><i></i> CLASSIFIED // SECTOR 07</div>
+      <h1 class="logo">BLACK<span>SITE</span></h1>
+      <div class="logo-sub">OPERATION <b>NIGHTFALL</b></div>
+      <p class="brief">
+        The relay went dark eleven hours ago. You are the only asset still breathing inside the perimeter.
+        Hold the courtyard. Break the assault. <b>Extract before dawn.</b>
+      </p>
+      <button id="btn-deploy" class="btn-primary" type="button" aria-label="Start">
+        <span class="btn-label">DEPLOY</span>
+        <span class="btn-meta">ENTER THE BLACKSITE</span>
+      </button>
+      <div class="controls-grid">
+        <div class="ctrl"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>MOVE</span></div>
+        <div class="ctrl"><kbd>MOUSE</kbd><span>LOOK / FIRE</span></div>
+        <div class="ctrl"><kbd>RMB</kbd><span>AIM DOWN SIGHT</span></div>
+        <div class="ctrl"><kbd>SHIFT</kbd><span>SPRINT</span></div>
+        <div class="ctrl"><kbd>R</kbd><span>RELOAD</span></div>
+        <div class="ctrl"><kbd>G</kbd><span>FRAG</span></div>
+        <div class="ctrl"><kbd>SPACE</kbd><span>JUMP</span></div>
+        <div class="ctrl"><kbd>ESC</kbd><span>PAUSE</span></div>
+      </div>
+      <div class="settings-row">
+        <label>SENSITIVITY <input id="sens" type="range" min="0.3" max="2.5" step="0.05" value="1" /></label>
+        <button id="btn-mute" class="btn-ghost" type="button">SOUND: ON</button>
+        <span class="hint">HEADPHONES RECOMMENDED</span>
+      </div>
+      <div class="menu-foot">
+        <span>BUILT WITH THREE.JS</span><i></i><span>WAVE SURVIVAL</span><i></i><span>v1.0</span>
+      </div>
+    </div>
+    <div class="menu-reticle" aria-hidden="true">
+      <div class="ret-ring outer"></div>
+      <div class="ret-ring mid"></div>
+      <div class="ret-ring inner"></div>
+      <div class="ret-tick t"></div>
+      <div class="ret-tick b"></div>
+      <div class="ret-tick l"></div>
+      <div class="ret-tick r"></div>
+      <div class="ret-dot"></div>
+      <div class="ret-label">TARGET // GHOST-7</div>
+      <div class="ret-coords">34.0522N &nbsp; 118.2437W</div>
+      <div class="ret-status">SIGNAL ACQUIRED</div>
+    </div>
+    <div class="menu-side">
+      <div class="side-line"><span>LAT</span><b>34.0522 N</b></div>
+      <div class="side-line"><span>LON</span><b>118.2437 W</b></div>
+      <div class="side-line"><span>TIME</span><b id="menu-clock">03:41:22</b></div>
+      <div class="side-line"><span>THREAT</span><b class="hot">SEVERE</b></div>
+      <div class="side-coords">// SIGNAL LOST</div>
+    </div>
+  </div>
+
+  <!-- ============ PAUSE ============ -->
+  <div id="pause" class="screen hidden">
+    <div class="panel">
+      <div class="panel-eyebrow">TACTICAL PAUSE</div>
+      <h2>STAND BY</h2>
+      <div class="panel-stats">
+        <div><span>WAVE</span><b id="pause-wave">01</b></div>
+        <div><span>SCORE</span><b id="pause-score">0</b></div>
+        <div><span>KILLS</span><b id="pause-kills">0</b></div>
+      </div>
+      <button id="btn-resume" class="btn-primary" type="button"><span class="btn-label">RESUME</span><span class="btn-meta">RETURN TO THE FIGHT</span></button>
+      <div class="panel-row">
+        <button id="btn-restart" class="btn-ghost" type="button">RESTART</button>
+        <button id="btn-quit" class="btn-ghost" type="button">ABANDON</button>
+      </div>
+      <div class="panel-hint">Press <kbd>ESC</kbd> to resume</div>
+    </div>
+  </div>
+
+  <!-- ============ GAME OVER ============ -->
+  <div id="gameover" class="screen hidden">
+    <div class="panel over">
+      <div class="panel-eyebrow red">VITALS LOST // SIGNAL TERMINATED</div>
+      <h2>K.I.A.</h2>
+      <p class="over-sub">The blacksite holds. For now.</p>
+      <div class="over-stats">
+        <div><span>WAVE REACHED</span><b id="over-wave">1</b></div>
+        <div><span>SCORE</span><b id="over-score">0</b></div>
+        <div><span>KILLS</span><b id="over-kills">0</b></div>
+        <div><span>ACCURACY</span><b id="over-acc">0%</b></div>
+        <div><span>HEADSHOTS</span><b id="over-heads">0</b></div>
+        <div><span>BEST STREAK</span><b id="over-streak">0</b></div>
+      </div>
+      <button id="btn-redeploy" class="btn-primary" type="button"><span class="btn-label">REDEPLOY</span><span class="btn-meta">TRY AGAIN</span></button>
+      <button id="btn-menu" class="btn-ghost wide" type="button">RETURN TO BRIEFING</button>
+    </div>
+  </div>
+
+  <!-- ============ TOUCH ============ -->
+  <div id="touch-ui" class="hidden">
+    <div id="look-zone"></div>
+    <div id="joystick"><div id="joystick-ring"></div><div id="joystick-knob"></div></div>
+    <div id="touch-buttons">
+      <button id="btn-grenade" class="tbtn small" type="button" aria-label="Grenade"><span>◈</span></button>
+      <button id="btn-reload" class="tbtn small" type="button" aria-label="Reload"><span>⟳</span></button>
+      <button id="btn-jump" class="tbtn small" type="button" aria-label="Jump"><span>▲</span></button>
+      <button id="btn-ads" class="tbtn medium" type="button" aria-label="Aim"><span>◎</span></button>
+      <button id="btn-fire" class="tbtn fire" type="button" aria-label="Fire"><span></span></button>
+    </div>
+    <button id="btn-pause" class="tbtn small" type="button" aria-label="Pause"><span>❚❚</span></button>
+  </div>
+
+  <div id="rotate-hint" class="hidden">
+    <div class="rotate-icon">▭</div>
+    <b>ROTATE DEVICE</b>
+    <span>Landscape is recommended for tactical operations.</span>
+  </div>
+
+  <div id="boot">
+    <div class="boot-inner">
+      <div class="boot-logo">BLACKSITE</div>
+      <div class="boot-bar"><i></i></div>
+      <div class="boot-text">INITIALIZING OPTICS…</div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
